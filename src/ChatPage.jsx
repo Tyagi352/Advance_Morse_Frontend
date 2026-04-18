@@ -1,9 +1,8 @@
 /**
- * ChatPage.jsx — Real-time Morse code chat.
- * Plugs into the existing app: uses localStorage "token" for JWT auth,
- * connects to Flask-SocketIO on the same port 5000.
+ * ChatPage.jsx — Real-time Morse code chat with persistent DB storage.
  */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import ChatSidebar from "./components/ChatSidebar";
 import ChatWindow from "./components/ChatWindow";
@@ -13,12 +12,14 @@ const API_BASE   = "http://localhost:5000";
 const SOCKET_URL = "http://localhost:5000";
 
 export default function ChatPage({ token }) {
+  const navigate = useNavigate();
   const [socket,       setSocket]       = useState(null);
   const [onlineUsers,  setOnlineUsers]  = useState([]);
   const [users,        setUsers]        = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  // allMessages: { [userId]: Message[] }
   const [allMessages,  setAllMessages]  = useState({});
+  const [loadingChat,  setLoadingChat]  = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const socketRef = useRef(null);
 
   // ── Connect Socket.IO ──────────────────────────────────────
@@ -33,7 +34,7 @@ export default function ChatPage({ token }) {
     sock.on("connect", () => console.log("Socket connected"));
     sock.on("online_users", (ids) => setOnlineUsers(ids));
     sock.on("private_message", (msg) => {
-      const decoded = decodeFromMorse(msg.morse);
+      const decoded = msg.decoded || decodeFromMorse(msg.morse);
       setAllMessages(prev => ({
         ...prev,
         [msg.from]: [
@@ -55,19 +56,48 @@ export default function ChatPage({ token }) {
   // ── Fetch registered users ─────────────────────────────────
   useEffect(() => {
     if (!token) return;
+    setLoadingUsers(true);
     fetch(`${API_BASE}/api/users`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
-      .then(data => Array.isArray(data) && setUsers(data))
-      .catch(console.error);
+      .then(data => { if (Array.isArray(data)) setUsers(data); })
+      .catch(console.error)
+      .finally(() => setLoadingUsers(false));
   }, [token]);
 
-  // ── Send a message ─────────────────────────────────────────
+  // ── Load chat history from DB when selecting a user ────────
+  const loadChatHistory = useCallback(async (userId) => {
+    if (!token || allMessages[userId]) return; // already loaded
+    setLoadingChat(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/chat/history/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const history = await res.json();
+        setAllMessages(prev => ({
+          ...prev,
+          [userId]: history,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+    } finally {
+      setLoadingChat(false);
+    }
+  }, [token, allMessages]);
+
+  const handleSelectUser = useCallback((user) => {
+    setSelectedUser(user);
+    loadChatHistory(user.id);
+  }, [loadChatHistory]);
+
+  // ── Send a message (also send decoded text to backend for DB) ──
   const sendMessage = (decoded, recipientId, morse) => {
     if (!socketRef.current) return;
     const ts = Date.now();
-    socketRef.current.emit("private_message", { to: recipientId, morse, timestamp: ts });
+    socketRef.current.emit("private_message", { to: recipientId, morse, decoded, timestamp: ts });
     setAllMessages(prev => ({
       ...prev,
       [recipientId]: [
@@ -85,7 +115,9 @@ export default function ChatPage({ token }) {
         users={users}
         onlineUsers={onlineUsers}
         selectedUser={selectedUser}
-        onSelectUser={setSelectedUser}
+        onSelectUser={handleSelectUser}
+        onBack={() => navigate("/dashboard")}
+        loading={loadingUsers}
       />
       <ChatWindow
         selectedUser={selectedUser}
@@ -94,6 +126,8 @@ export default function ChatPage({ token }) {
         onSend={(decoded, morse) =>
           selectedUser && sendMessage(decoded, selectedUser.id, morse)
         }
+        onBackClick={() => setSelectedUser(null)}
+        loading={loadingChat}
       />
     </div>
   );

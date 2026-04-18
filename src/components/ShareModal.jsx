@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
+import { Loader } from 'lucide-react';
 
 const API_BASE = "http://localhost:5000";
 
 export default function ShareModal({ file, token, users, onClose }) {
   const [recipientId, setRecipientId] = useState('');
   const [status,      setStatus]      = useState('');
+  const [isLoading,   setIsLoading]   = useState(false);
 
   const handleShareFile = async () => {
     if (!recipientId) { setStatus('Please select a recipient'); return; }
-    setStatus('Sharing file...');
+    setIsLoading(true);
+    setStatus('');
 
     const formData = new FormData();
     formData.append('file', file);
@@ -26,49 +29,65 @@ export default function ShareModal({ file, token, users, onClose }) {
         setTimeout(onClose, 1500);
       } else {
         setStatus(data.error || 'Failed to share file.');
+        setIsLoading(false);
       }
     } catch (err) {
       console.error(err);
       setStatus('A server error occurred.');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Share File with User</h2>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[#18181B] p-7 rounded-xl shadow-2xl w-full max-w-md border border-[#27272A] animate-fade-in-up">
+        <h2 className="text-xl font-bold mb-5 text-white">Share File</h2>
         <div className="space-y-4">
           <select
             value={recipientId}
             onChange={e => setRecipientId(e.target.value)}
-            className="w-full p-3 rounded-lg bg-gray-50 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+            disabled={isLoading}
+            className="w-full p-2.5 rounded-lg bg-[#09090B] border border-[#27272A] text-white placeholder-[#52525B] focus:outline-none focus:ring-1 focus:ring-[#3F3F46] transition-all disabled:opacity-50 text-[14px]"
           >
-            <option value="" disabled>Select a user</option>
+            <option value="" disabled className="bg-[#18181B]">Select a user</option>
             {users.map(u => (
-              <option key={u.id} value={u.id}>
+              <option key={u.id} value={u.id} className="bg-[#18181B]">
                 {u.username} ({u.email})
               </option>
             ))}
           </select>
-          <div className="text-center text-sm text-gray-600">
-            File to be sent: <strong>{file?.name}</strong>
+          <div className="text-center text-[13px] text-[#71717A]">
+            File: <strong className="text-white">{file?.name}</strong>
           </div>
         </div>
-        <div className="flex justify-end space-x-4 mt-6">
+        <div className="flex justify-end space-x-3 mt-6">
           <button
             onClick={onClose}
-            className="px-6 py-2 font-semibold text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+            disabled={isLoading}
+            className="px-5 py-2 font-medium text-[#A1A1AA] bg-[#27272A] rounded-lg hover:bg-[#3F3F46] transition-colors disabled:opacity-50 border border-[#3F3F46] text-[13px]"
           >
             Cancel
           </button>
           <button
             onClick={handleShareFile}
-            className="px-6 py-2 font-bold text-white bg-black rounded-lg hover:bg-gray-800 transition-colors"
+            disabled={isLoading}
+            className="px-5 py-2 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all disabled:opacity-50 flex items-center gap-2 text-[13px] btn-lift"
           >
-            Share
+            {isLoading ? (
+              <>
+                <Loader size={14} className="animate-spin" />
+                Sharing...
+              </>
+            ) : (
+              'Share'
+            )}
           </button>
         </div>
-        {status && <p className="mt-4 text-center text-sm text-gray-600">{status}</p>}
+        {status && (
+          <p className={`mt-4 text-center text-[13px] font-medium ${status.includes('success') ? 'text-white' : 'text-[#A1A1AA]'}`}>
+            {status}
+          </p>
+        )}
       </div>
     </div>
   );

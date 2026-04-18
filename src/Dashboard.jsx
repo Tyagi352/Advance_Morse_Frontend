@@ -22,7 +22,10 @@ import {
   Mic,
   MicOff,
   StopCircle,
-  Radio
+  Radio,
+  ArrowUpRight,
+  Activity,
+  Shield
 } from "lucide-react";
 import { strictEncodeToMorse } from "./utils/morse";
 
@@ -30,7 +33,9 @@ const API_BASE = "http://localhost:5000";
 
 export default function Dashboard({ token, setToken }) {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
@@ -59,8 +64,18 @@ export default function Dashboard({ token, setToken }) {
       fetchUsers();
       fetchSentFiles();
       fetchReceivedFiles();
+      fetchCurrentUser();
     }
   }, [token]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setCurrentUser(await res.json());
+    } catch (err) { console.error("Failed to fetch current user", err); }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -211,7 +226,7 @@ export default function Dashboard({ token, setToken }) {
 
     recognition.onstart = () => {
       setIsRecording(true);
-      setMessage(""); // clear previous messages
+      setMessage("");
     };
 
     recognition.onresult = (event) => {
@@ -225,7 +240,6 @@ export default function Dashboard({ token, setToken }) {
         const morse = strictEncodeToMorse(currentTranscript, language);
         setSpeechMorse(morse);
       } catch (err) {
-        // Validation failed
         setSpeechMorse("");
         setMessage(err.message || "Unsupported character detected");
         recognition.stop();
@@ -267,168 +281,258 @@ export default function Dashboard({ token, setToken }) {
   );
 
   const navItems = [
-    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
-    { id: "encode", label: "Encode", icon: <Lock size={20} /> },
-    { id: "decode", label: "Decode", icon: <Unlock size={20} /> },
-    { id: "sent", label: "Sent Files", icon: <Send size={20} /> },
-    { id: "received", label: "Received Files", icon: <Inbox size={20} /> },
+    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+    { id: "encode", label: "Encode", icon: <Lock size={18} /> },
+    { id: "decode", label: "Decode", icon: <Unlock size={18} /> },
+    { id: "sent", label: "Sent Files", icon: <Send size={18} /> },
+    { id: "received", label: "Received", icon: <Inbox size={18} /> },
   ];
 
   return (
-    <div className="flex h-screen bg-[#0B0F14] text-white font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-[#0B0F14] border-r border-[#1F2937] flex flex-col hidden md:flex">
-        <div className="h-20 flex items-center px-6 border-b border-[#1F2937]">
-          <div className="text-[#FACC15] font-bold text-xl flex items-center gap-2">
-            <Lock className="text-[#FACC15]" /> Morse Encoder
-          </div>
+    <div className="flex h-screen bg-[#09090B] text-white font-['Inter',sans-serif] overflow-hidden">
+      {/* ─── Sidebar ─── */}
+      <aside className={`bg-[#09090B] border-r border-[#27272A] flex flex-col transition-all duration-300 hidden md:flex ${sidebarOpen ? "w-64" : "w-20"}`}>
+        {/* Logo */}
+        <div className="h-[72px] flex items-center px-5 border-b border-[#27272A] justify-between">
+          {sidebarOpen && (
+            <div className="text-white font-bold text-[15px] flex items-center gap-2.5 tracking-tight">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <Shield className="text-[#09090B]" size={16} />
+              </div>
+              <span>Morse Encoder</span>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-[#18181B] rounded-lg transition-colors text-[#71717A] hover:text-white flex items-center justify-center"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {sidebarOpen ? "≪" : "≫"}
+          </button>
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-2">
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+          {sidebarOpen && (
+            <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#52525B] px-3 mb-3">Navigation</p>
+          )}
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                 activeTab === item.id
-                  ? "bg-[#111827] text-[#FACC15] border border-[#1F2937] shadow-sm transform scale-[1.02]"
-                  : "text-gray-400 hover:text-white hover:bg-[#111827] border border-transparent hover:border-[#1F2937]"
+                  ? "bg-white text-[#09090B] font-semibold shadow-sm"
+                  : "text-[#A1A1AA] hover:text-white hover:bg-[#18181B]"
               }`}
+              title={!sidebarOpen ? item.label : ""}
             >
               {item.icon}
-              <span className="font-semibold text-sm">{item.label}</span>
+              {sidebarOpen && <span className="text-[13px]">{item.label}</span>}
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-[#1F2937]">
+
+        {/* Chat Button */}
+        <div className="p-3 border-t border-[#27272A]">
           <button
             onClick={() => navigate("/chat")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 text-gray-400 hover:text-white hover:bg-[#111827] border border-transparent hover:border-[#1F2937] font-semibold text-sm"
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg transition-all duration-200 text-[#A1A1AA] hover:text-white hover:bg-[#18181B] text-[13px] font-medium ${
+              sidebarOpen ? "" : "p-2"
+            }`}
+            title="Open Chat"
           >
-            💬 Open Chat
+            💬
+            {sidebarOpen && <span>Open Chat</span>}
           </button>
+        </div>
+
+        {/* Sidebar User & Logout */}
+        <div className="p-3 border-t border-[#27272A]">
+          {sidebarOpen ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#27272A] border border-[#3F3F46] flex items-center justify-center text-white text-xs font-bold">
+                  {currentUser?.username?.substring(0, 2).toUpperCase() || "U"}
+                </div>
+                <span className="text-[13px] text-[#A1A1AA] font-medium truncate max-w-[120px]">{currentUser?.username || "User"}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-[#52525B] hover:text-white transition-colors p-1.5 hover:bg-[#18181B] rounded-md"
+                title="Logout"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center text-[#52525B] hover:text-white transition-colors p-2 hover:bg-[#18181B] rounded-md"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* ─── Main Content ─── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Navbar */}
-        <header className="h-20 bg-[#0B0F14]/80 backdrop-blur-md border-b border-[#1F2937] flex items-center justify-between px-8 z-10">
-          <div className="flex-1 max-w-xl relative hidden md:block">
-            <Search className="absolute left-4 top-3 h-5 w-5 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search sent or received files..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#111827] text-white border border-[#1F2937] rounded-xl pl-12 pr-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all placeholder-gray-500 text-sm"
-            />
+        
+        {/* Top bar */}
+        <header className="h-[72px] bg-[#09090B]/90 backdrop-blur-xl border-b border-[#27272A] flex items-center justify-between px-8 z-10 shrink-0">
+          <div>
+            {activeTab === "dashboard" ? (
+              <div>
+                <h1 className="text-xl font-bold text-white tracking-tight">Welcome back, {currentUser?.username || "User"}</h1>
+                <p className="text-[13px] text-[#71717A] mt-0.5">Manage your encrypted transmissions</p>
+              </div>
+            ) : (
+              <div className="flex-1 max-w-md relative hidden md:block">
+                <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-[#52525B]" />
+                <input
+                  type="text"
+                  placeholder="Search files..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#18181B] text-white border border-[#27272A] rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#3F3F46] focus:border-[#3F3F46] transition-all placeholder-[#52525B] text-[13px]"
+                />
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center gap-6 ml-auto">
+          <div className="flex items-center gap-4 ml-auto">
             {message && (
-              <span className="text-sm font-medium text-gray-300 animate-pulse bg-[#111827] px-4 py-1.5 rounded-full border border-[#1F2937]">
+              <span className="text-[12px] font-medium text-[#A1A1AA] animate-pulse bg-[#18181B] px-3 py-1.5 rounded-full border border-[#27272A]">
                 {message}
               </span>
             )}
-            <button className="text-gray-400 hover:text-[#FACC15] transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FACC15] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#FACC15]"></span>
+            <button className="text-[#52525B] hover:text-white transition-colors relative p-2 hover:bg-[#18181B] rounded-lg">
+              <Bell size={18} />
+              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-40"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
               </span>
             </button>
-            <div className="h-8 w-px bg-[#1F2937]"></div>
-            <div className="flex items-center gap-3 cursor-pointer group">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FACC15] to-orange-500 flex items-center justify-center text-black font-bold shadow-md transform group-hover:scale-105 transition-transform">
-                ME
+            <div className="h-6 w-px bg-[#27272A]"></div>
+            <div className="flex items-center gap-2 cursor-pointer group">
+              <div className="w-8 h-8 rounded-full bg-[#27272A] border border-[#3F3F46] flex items-center justify-center text-white text-xs font-bold group-hover:border-[#52525B] transition-colors">
+                {currentUser?.username?.substring(0, 2).toUpperCase() || "U"}
               </div>
-              <ChevronDown className="text-gray-500 group-hover:text-white transition-colors" size={16} />
+              <ChevronDown className="text-[#52525B] group-hover:text-white transition-colors" size={14} />
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-gray-400 hover:text-red-400 transition-colors"
-              title="Logout"
-            >
-              <LogOut size={20} />
-            </button>
           </div>
         </header>
 
-        {/* Scrollable Content */}
+        {/* ─── Scrollable Content ─── */}
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           <div className="max-w-6xl mx-auto space-y-8 pb-10">
             
-            {/* Dashboard View (Overview/Shared File Logs) */}
+            {/* ═══ Dashboard Overview ═══ */}
             {activeTab === "dashboard" && (
               <div className="space-y-6 animate-fade-in-up">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white">Shared File Logs</h1>
-                  <p className="text-gray-400 mt-1">Manage and track your end-to-end encoded file transfers.</p>
-                </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Sent Files Summary */}
-                  <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#FACC15]/30 transition-all">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#FACC15]/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-[#0B0F14] rounded-xl border border-[#1F2937]">
-                        <Send className="text-[#FACC15] h-6 w-6" />
+                {/* Stats Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-[#18181B] border border-[#27272A] rounded-xl p-5 hover:border-[#3F3F46] transition-all group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-[#27272A] rounded-lg border border-[#3F3F46] group-hover:bg-white group-hover:border-white transition-all">
+                        <Send className="h-4 w-4 text-white group-hover:text-[#09090B] transition-colors" />
                       </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-white">Sent Files</h2>
-                        <p className="text-sm text-gray-500">{sentFiles.length} files encoded & shared</p>
-                      </div>
+                      <ArrowUpRight size={14} className="text-[#52525B]" />
                     </div>
-                    <button onClick={() => setActiveTab("sent")} className="text-sm font-semibold text-[#FACC15] hover:text-white flex items-center gap-1 transition-colors">
-                      View all sent files <UploadCloud size={16} />
-                    </button>
+                    <p className="text-2xl font-bold text-white">{sentFiles.length}</p>
+                    <p className="text-[12px] text-[#71717A] mt-0.5">Files Sent</p>
                   </div>
-
-                  {/* Received Files Summary */}
-                  <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-all">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-[#0B0F14] rounded-xl border border-[#1F2937]">
-                        <Inbox className="text-blue-400 h-6 w-6" />
+                  <div className="bg-[#18181B] border border-[#27272A] rounded-xl p-5 hover:border-[#3F3F46] transition-all group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-[#27272A] rounded-lg border border-[#3F3F46] group-hover:bg-white group-hover:border-white transition-all">
+                        <Inbox className="h-4 w-4 text-white group-hover:text-[#09090B] transition-colors" />
                       </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-white">Received Files</h2>
-                        <p className="text-sm text-gray-500">{receivedFiles.length} files securely received</p>
-                      </div>
+                      <ArrowUpRight size={14} className="text-[#52525B]" />
                     </div>
-                    <button onClick={() => setActiveTab("received")} className="text-sm font-semibold text-blue-400 hover:text-white flex items-center gap-1 transition-colors">
-                      View all received files <Download size={16} />
-                    </button>
+                    <p className="text-2xl font-bold text-white">{receivedFiles.length}</p>
+                    <p className="text-[12px] text-[#71717A] mt-0.5">Files Received</p>
+                  </div>
+                  <div className="bg-[#18181B] border border-[#27272A] rounded-xl p-5 hover:border-[#3F3F46] transition-all group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-[#27272A] rounded-lg border border-[#3F3F46] group-hover:bg-white group-hover:border-white transition-all">
+                        <Activity className="h-4 w-4 text-white group-hover:text-[#09090B] transition-colors" />
+                      </div>
+                      <ArrowUpRight size={14} className="text-[#52525B]" />
+                    </div>
+                    <p className="text-2xl font-bold text-white">{sentFiles.length + receivedFiles.length}</p>
+                    <p className="text-[12px] text-[#71717A] mt-0.5">Total Transfers</p>
                   </div>
                 </div>
 
-                <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-6 shadow-xl">
-                  <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                    <Clock size={18} className="text-gray-400" /> Recent Activity
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setActiveTab("sent")}
+                    className="bg-[#18181B] border border-[#27272A] rounded-xl p-5 hover:border-[#3F3F46] transition-all group text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-[#27272A] rounded-lg border border-[#3F3F46]">
+                        <Send className="text-white h-4 w-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-[15px] font-semibold text-white">Sent Files</h2>
+                        <p className="text-[12px] text-[#71717A]">{sentFiles.length} files encoded & shared</p>
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-medium text-[#71717A] group-hover:text-white flex items-center gap-1 transition-colors mt-2">
+                      View all → 
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("received")}
+                    className="bg-[#18181B] border border-[#27272A] rounded-xl p-5 hover:border-[#3F3F46] transition-all group text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-[#27272A] rounded-lg border border-[#3F3F46]">
+                        <Inbox className="text-white h-4 w-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-[15px] font-semibold text-white">Received Files</h2>
+                        <p className="text-[12px] text-[#71717A]">{receivedFiles.length} files securely received</p>
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-medium text-[#71717A] group-hover:text-white flex items-center gap-1 transition-colors mt-2">
+                      View all →
+                    </span>
+                  </button>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-[#18181B] border border-[#27272A] rounded-xl p-5">
+                  <h3 className="text-[14px] font-semibold text-white mb-4 flex items-center gap-2">
+                    <Clock size={14} className="text-[#71717A]" /> Recent Activity
                   </h3>
-                  <div className="space-y-4">
-                    {/* Just listing top 5 recent files overall */}
+                  <div className="space-y-2">
                     {[...sentFiles, ...receivedFiles]
                       .sort((a, b) => new Date(b.shared_at) - new Date(a.shared_at))
                       .slice(0, 5)
                       .map((f, i) => {
                         const isSent = !!f.recipient;
                         return (
-                          <div key={`activity-${i}`} className="flex items-center justify-between p-4 bg-[#0B0F14] rounded-xl border border-[#1F2937] hover:border-gray-600 transition-colors group">
-                            <div className="flex items-center gap-4">
-                              <div className={`p-2 rounded-lg ${isSent ? "bg-[#FACC15]/10 text-[#FACC15]" : "bg-blue-500/10 text-blue-400"}`}>
-                                {isSent ? <Send size={18} /> : <Inbox size={18} />}
+                          <div key={`activity-${i}`} className="flex items-center justify-between p-3 bg-[#09090B] rounded-lg border border-[#27272A] hover:border-[#3F3F46] transition-colors group">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-1.5 rounded-md ${isSent ? "bg-[#27272A]" : "bg-[#27272A]"}`}>
+                                {isSent ? <Send size={14} className="text-white" /> : <Inbox size={14} className="text-[#A1A1AA]" />}
                               </div>
                               <div>
-                                <h4 className="font-semibold text-sm text-gray-200">{f.file_name}</h4>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <h4 className="font-medium text-[13px] text-[#E4E4E7]">{f.file_name}</h4>
+                                <p className="text-[11px] text-[#52525B] mt-0.5">
                                   {isSent ? `Shared with ${f.recipient}` : `Received from ${f.sender}`}
                                 </p>
                               </div>
                             </div>
-                            <div className="text-right flex flex-col items-end">
-                              <span className="text-xs text-gray-500">{new Date(f.shared_at).toLocaleDateString()}</span>
-                              <button onClick={() => downloadFile(f.id, f.file_name)} className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold hover:text-[#FACC15]">
+                            <div className="text-right flex flex-col items-end gap-1">
+                              <span className="text-[11px] text-[#52525B]">{new Date(f.shared_at).toLocaleDateString()}</span>
+                              <button onClick={() => downloadFile(f.id, f.file_name)} className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-medium text-white hover:text-[#A1A1AA]">
                                 Download
                               </button>
                             </div>
@@ -436,31 +540,31 @@ export default function Dashboard({ token, setToken }) {
                         );
                       })}
                     {sentFiles.length === 0 && receivedFiles.length === 0 && (
-                      <p className="text-sm text-gray-500 text-center py-4">No recent activity found.</p>
+                      <p className="text-[13px] text-[#52525B] text-center py-8">No recent activity found.</p>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Encode View */}
+            {/* ═══ Encode View ═══ */}
             {activeTab === "encode" && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Encode & Encrypt</h1>
-                  <p className="text-gray-400">Convert text or files into layered secure Morse Code format.</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Encode & Encrypt</h1>
+                  <p className="text-[#71717A] text-[14px]">Convert text or files into layered secure Morse Code format.</p>
                 </div>
                 
-                {/* Language Selector inline */}
-                <div className="flex items-center gap-3 overflow-x-auto pb-4 hide-scrollbar">
+                {/* Language Selector */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
                   {languages.map(lang => (
                     <button
                       key={lang}
                       onClick={() => setLanguage(lang)}
-                      className={`px-5 py-2 rounded-full text-sm font-bold capitalize transition-all whitespace-nowrap ${
+                      className={`px-4 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-all whitespace-nowrap ${
                         language === lang
-                          ? "bg-[#FACC15] text-black shadow-[0_0_15px_rgba(250,204,21,0.3)] transform scale-105"
-                          : "bg-[#111827] text-gray-400 border border-[#1F2937] hover:border-gray-500"
+                          ? "bg-white text-[#09090B]"
+                          : "bg-[#18181B] text-[#71717A] border border-[#27272A] hover:border-[#3F3F46] hover:text-white"
                       }`}
                     >
                       {lang}
@@ -468,116 +572,121 @@ export default function Dashboard({ token, setToken }) {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-[#111827] border border-[#1F2937] p-6 rounded-2xl shadow-xl">
-                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                      <FileText className="text-[#FACC15]" size={20} /> Text Encoding
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Text Encoding */}
+                  <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group">
+                    <h2 className="text-[15px] font-semibold mb-4 flex items-center gap-2.5">
+                      <div className="p-1.5 bg-[#27272A] rounded-md group-hover:bg-white group-hover:text-[#09090B] transition-all">
+                        <FileText className="text-white group-hover:text-[#09090B]" size={16} />
+                      </div>
+                      Text Encoding
                     </h2>
                     <textarea
                       placeholder="Type your sensitive message here..."
                       value={text}
                       onChange={e => setText(e.target.value)}
-                      className="w-full p-4 rounded-xl bg-[#0B0F14] text-gray-200 border border-[#1F2937] focus:outline-none focus:ring-1 focus:ring-[#FACC15] focus:border-[#FACC15] h-40 resize-none transition-all placeholder-gray-600 mb-6"
+                      className="w-full p-3.5 rounded-lg bg-[#09090B] text-[#E4E4E7] border border-[#27272A] focus:outline-none focus:ring-1 focus:ring-[#3F3F46] focus:border-[#3F3F46] h-36 resize-none transition-all placeholder-[#52525B] text-[14px] mb-4"
                     />
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <button onClick={() => encodeText(false)} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-black bg-[#FACC15] rounded-xl hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20">
-                        <Download size={18} /> Encode & Save
+                    <div className="flex gap-3">
+                      <button onClick={() => encodeText(false)} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] btn-lift">
+                        <Download size={14} /> Encode & Download
                       </button>
-                      <button onClick={() => encodeText(true)} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-[#1F2937] border border-gray-600 rounded-xl hover:bg-gray-700 transition-colors">
-                        <Send size={18} /> Encode & Share
+                      <button onClick={() => encodeText(true)} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] btn-lift">
+                        <Send size={14} /> Encode & Share
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-[#111827] border border-[#1F2937] p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                  {/* File Encoding */}
+                  <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group flex flex-col justify-between">
                     <div>
-                      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Lock className="text-[#FACC15]" size={20} /> File Encoding
+                      <h2 className="text-[15px] font-semibold mb-4 flex items-center gap-2.5">
+                        <div className="p-1.5 bg-[#27272A] rounded-md group-hover:bg-white group-hover:text-[#09090B] transition-all">
+                          <Lock className="text-white group-hover:text-[#09090B]" size={16} />
+                        </div>
+                        File Encoding
                       </h2>
-                      <div className="border-2 border-dashed border-[#1F2937] rounded-xl p-8 mb-6 text-center hover:border-gray-500 transition-colors relative cursor-pointer group bg-[#0B0F14]">
+                      <div className="border border-dashed border-[#27272A] group-hover:border-[#3F3F46] rounded-xl p-6 mb-4 text-center hover:bg-white/[0.02] transition-all relative cursor-pointer bg-[#09090B]">
                         <input
                           type="file"
                           accept=".txt"
                           onChange={e => setFileToEncode(e.target.files[0])}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
-                        <UploadCloud className="mx-auto h-12 w-12 text-gray-500 group-hover:text-[#FACC15] transition-colors mb-3" />
-                        <p className="text-sm text-gray-400">
+                        <UploadCloud className="mx-auto h-8 w-8 text-[#52525B] group-hover:text-white transition-colors mb-2" />
+                        <p className="text-[13px] text-[#71717A]">
                           {fileToEncode ? (
-                            <span className="text-[#FACC15] font-semibold">{fileToEncode.name}</span>
+                            <span className="text-white font-medium">{fileToEncode.name}</span>
                           ) : (
-                            <>Drag and drop or <span className="text-[#FACC15] font-semibold">browse</span> standard .txt file</>
+                            <>Drop or <span className="text-white font-medium">browse</span> .txt file</>
                           )}
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-4 mt-auto">
-                      <button onClick={() => encodeTextFile(false)} disabled={!fileToEncode} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-black bg-[#FACC15] rounded-xl hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <Download size={18} /> Encode & Save
+                    <div className="flex gap-3">
+                      <button onClick={() => encodeTextFile(false)} disabled={!fileToEncode} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
+                        <Download size={14} /> Download
                       </button>
-                      <button onClick={() => encodeTextFile(true)} disabled={!fileToEncode} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-[#1F2937] border border-gray-600 rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <Send size={18} /> Encode & Share
+                      <button onClick={() => encodeTextFile(true)} disabled={!fileToEncode} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
+                        <Send size={14} /> Share
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Speech to Morse Voice Encoding block */}
-                <div className="bg-[#111827] border border-[#1F2937] p-6 rounded-2xl shadow-xl mt-8">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                      <Mic className="text-[#FACC15]" size={20} /> Voice Encoding
+                {/* Voice Encoding */}
+                <div className="bg-[#18181B] border border-[#27272A] p-6 rounded-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-[15px] font-semibold flex items-center gap-2 text-white">
+                      <Mic className="text-[#71717A]" size={16} /> Voice Encoding
                     </h2>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       {isRecording && (
                         <div className="flex items-center gap-1">
-                          <span className="w-1.5 h-4 bg-[#FACC15] rounded-full animate-[pulse_1s_ease-in-out_infinite]"></span>
-                          <span className="w-1.5 h-6 bg-[#FACC15] rounded-full animate-[pulse_1.2s_ease-in-out_infinite_0.2s]"></span>
-                          <span className="w-1.5 h-4 bg-[#FACC15] rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></span>
-                          <span className="text-[#FACC15] text-sm font-bold ml-2 animate-pulse">Recording...</span>
+                          <span className="w-1 h-3 bg-white rounded-full animate-[pulse_1s_ease-in-out_infinite]"></span>
+                          <span className="w-1 h-5 bg-white rounded-full animate-[pulse_1.2s_ease-in-out_infinite_0.2s]"></span>
+                          <span className="w-1 h-3 bg-white rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></span>
+                          <span className="text-white text-[11px] font-semibold ml-1.5 animate-pulse">Recording</span>
                         </div>
                       )}
                       <button
                         onClick={toggleRecording}
-                        className={`flex items-center gap-2 px-4 py-2 font-bold rounded-xl transition-all ${
+                        className={`flex items-center gap-2 px-3 py-1.5 font-semibold rounded-lg transition-all text-[12px] ${
                           isRecording
-                            ? "bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30"
-                            : "bg-[#FACC15]/20 text-[#FACC15] border border-[#FACC15]/50 hover:bg-[#FACC15]/30"
+                            ? "bg-white/10 text-white border border-white/30 hover:bg-white/20"
+                            : "bg-[#27272A] text-[#A1A1AA] border border-[#3F3F46] hover:bg-[#3F3F46] hover:text-white"
                         }`}
                       >
-                        {isRecording ? <StopCircle size={18} /> : <Radio size={18} />}
-                        {isRecording ? "Stop Recording" : "Start Recording"}
+                        {isRecording ? <StopCircle size={14} /> : <Radio size={14} />}
+                        {isRecording ? "Stop" : "Record"}
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-400 mb-2">Recognized Text</label>
+                      <label className="block text-[11px] font-semibold text-[#52525B] mb-1.5 uppercase tracking-wider">Recognized Text</label>
                       <textarea
                         readOnly
                         value={recognizedText}
-                        placeholder="Speak into your microphone to transcribe text..."
-                        className="w-full p-4 rounded-xl bg-[#0B0F14] text-gray-200 border border-[#1F2937] focus:outline-none h-32 resize-none transition-all placeholder-gray-600"
+                        placeholder="Speak into your microphone..."
+                        className="w-full p-3 rounded-lg bg-[#09090B] text-[#E4E4E7] border border-[#27272A] focus:outline-none h-28 resize-none placeholder-[#52525B] text-[13px]"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-400 mb-2">Morse Code Output</label>
+                      <label className="block text-[11px] font-semibold text-[#52525B] mb-1.5 uppercase tracking-wider">Morse Output</label>
                       <textarea
                         readOnly
                         value={speechMorse}
                         placeholder="Live Morse code output..."
-                        className="w-full p-4 rounded-xl bg-[#0B0F14] text-[#FACC15] font-mono border border-[#1F2937] focus:outline-none h-32 resize-none transition-all placeholder-gray-600"
+                        className="w-full p-3 rounded-lg bg-[#09090B] text-[#A1A1AA] font-mono border border-[#27272A] focus:outline-none h-28 resize-none placeholder-[#52525B] text-[12px]"
                       />
                     </div>
                   </div>
                   
-                  <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                    <button onClick={() => encodeVoiceText(false)} disabled={!recognizedText || !speechMorse} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-black bg-[#FACC15] rounded-xl hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
-                      <Download size={18} /> Encode & Save Voice
-                    </button>
-                    <button onClick={() => encodeVoiceText(true)} disabled={!recognizedText || !speechMorse} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-[#1F2937] border border-gray-600 rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      <Send size={18} /> Encode & Share Voice
+                  <div className="mt-4">
+                    <button onClick={() => encodeVoiceText(true)} disabled={!recognizedText || !speechMorse} className="w-full flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
+                      <Send size={14} /> Encode & Share Voice
                     </button>
                   </div>
                 </div>
@@ -585,64 +694,65 @@ export default function Dashboard({ token, setToken }) {
               </div>
             )}
 
-            {/* Decode View */}
+            {/* ═══ Decode View ═══ */}
             {activeTab === "decode" && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Decode & Decrypt</h1>
-                  <p className="text-gray-400">Restore your encrypted .enc files back to original accessible text.</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Decode & Decrypt</h1>
+                  <p className="text-[#71717A] text-[14px]">Restore your encrypted .enc files back to readable text.</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-[#111827] border border-[#1F2937] p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group flex flex-col justify-between">
                     <div>
-                      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Unlock className="text-[#FACC15]" size={20} /> File Decoding
+                      <h2 className="text-[15px] font-semibold mb-4 flex items-center gap-2.5">
+                        <div className="p-1.5 bg-[#27272A] rounded-md group-hover:bg-white transition-all">
+                          <Unlock className="text-white group-hover:text-[#09090B]" size={16} />
+                        </div>
+                        File Decoding
                       </h2>
-                      <div className="border-2 border-dashed border-[#1F2937] rounded-xl p-8 mb-6 text-center hover:border-gray-500 transition-colors relative cursor-pointer group bg-[#0B0F14]">
+                      <div className="border border-dashed border-[#27272A] group-hover:border-[#3F3F46] rounded-xl p-6 mb-4 text-center hover:bg-white/[0.02] transition-all relative cursor-pointer bg-[#09090B]">
                         <input
                           type="file"
                           accept=".enc"
                           onChange={e => setFile(e.target.files[0])}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
-                        <FileBadge className="mx-auto h-12 w-12 text-gray-500 group-hover:text-[#FACC15] transition-colors mb-3" />
-                        <p className="text-sm text-gray-400">
+                        <FileBadge className="mx-auto h-8 w-8 text-[#52525B] group-hover:text-white transition-colors mb-2" />
+                        <p className="text-[13px] text-[#71717A]">
                           {file ? (
-                            <span className="text-[#FACC15] font-semibold">{file.name}</span>
+                            <span className="text-white font-medium">{file.name}</span>
                           ) : (
-                            <>Drag and drop or <span className="text-[#FACC15] font-semibold">browse</span> encoded .enc file</>
+                            <>Drop or <span className="text-white font-medium">browse</span> .enc file</>
                           )}
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-4 mt-auto">
-                      <button onClick={decodeFile} disabled={!file} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-black bg-[#FACC15] rounded-xl hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <Unlock size={18} /> Decode File
-                      </button>
-                      <button onClick={() => openShareModal(file)} disabled={!file} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 font-semibold text-white bg-[#1F2937] border border-gray-600 rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <Share2 size={18} /> Share Directly
-                      </button>
-                    </div>
+                    <button onClick={decodeFile} disabled={!file} className="w-full flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
+                      <Unlock size={14} /> Decode File
+                    </button>
                   </div>
 
                   {decoded && (
-                    <div className="bg-[#111827] border border-[#1F2937] p-6 rounded-2xl shadow-xl">
+                    <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group">
                       <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                          <CheckCircle className="text-green-400" size={20} /> Decoded Output
+                        <h2 className="text-[15px] font-semibold text-white flex items-center gap-2.5">
+                          <div className="p-1.5 bg-white rounded-md">
+                            <CheckCircle className="text-[#09090B]" size={16} />
+                          </div>
+                          Decoded Output
                         </h2>
                         <button
                           onClick={shareDecodedText}
-                          className="px-4 py-2 font-semibold text-white bg-[#1F2937] border border-gray-600 rounded-lg hover:bg-gray-700 text-sm transition-colors"
+                          className="px-4 py-1.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] text-[12px] transition-all btn-lift"
                         >
-                          Share Output
+                          Share
                         </button>
                       </div>
                       <textarea
                         readOnly
                         value={decoded}
-                        className="w-full p-4 rounded-xl bg-[#0B0F14] text-[#FACC15] font-mono border border-[#1F2937] h-40 resize-none transition-all"
+                        className="w-full p-3 rounded-lg bg-[#09090B] text-[#A1A1AA] font-mono border border-[#27272A] h-36 resize-none text-[13px]"
                       />
                     </div>
                   )}
@@ -650,91 +760,86 @@ export default function Dashboard({ token, setToken }) {
               </div>
             )}
 
-            {/* Sent Files View */}
+            {/* ═══ Sent Files View ═══ */}
             {activeTab === "sent" && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Sent Files</h1>
-                  <p className="text-gray-400">View and manage the encrypted files you have shared with other users.</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Sent Files</h1>
+                  <p className="text-[#71717A] text-[14px]">View and manage the encrypted files you have shared.</p>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {filteredSent.length > 0 ? filteredSent.map(f => (
-                    <div key={f.id} className="bg-[#111827] border border-[#1F2937] hover:border-gray-600 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#0B0F14] rounded-xl text-[#FACC15] shrink-0 border border-[#1F2937]">
-                          <FileText size={24} />
+                    <div key={f.id} className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-[#27272A] rounded-lg border border-[#3F3F46] group-hover:bg-white group-hover:border-white transition-all shrink-0">
+                          <FileText size={18} className="text-white group-hover:text-[#09090B] transition-colors" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-gray-100">{f.file_name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs font-semibold px-2 py-0.5 bg-[#FACC15]/10 text-[#FACC15] rounded-md">Sent</span>
-                            <span className="text-sm text-gray-500">to <span className="text-gray-300">{f.recipient}</span></span>
-                            <span className="text-gray-700 text-xs">•</span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock size={12} /> {new Date(f.shared_at).toLocaleString()}
+                          <h3 className="font-semibold text-[15px] text-white">{f.file_name}</h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[11px] font-semibold px-2 py-0.5 bg-white/10 text-white rounded-full">Sent</span>
+                            <span className="text-[12px] text-[#71717A]">to</span>
+                            <span className="text-[12px] font-medium text-[#A1A1AA]">{f.recipient}</span>
+                            <span className="text-[#3F3F46] text-[10px]">•</span>
+                            <span className="text-[11px] text-[#52525B] flex items-center gap-1">
+                              <Clock size={10} /> {new Date(f.shared_at).toLocaleString()}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 ml-auto md:ml-0">
-                        <button onClick={() => downloadFile(f.id, f.file_name)} className="flex items-center gap-2 px-4 py-2 font-semibold text-sm text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/30 rounded-xl hover:bg-[#FACC15]/20 transition-colors">
-                          <Download size={16} /> Download
-                        </button>
-                        <button onClick={() => setMessage(`Revoke currently visual only for ${f.file_name}`)} className="flex items-center gap-2 px-4 py-2 font-semibold text-sm text-red-400 bg-red-400/10 border border-red-400/30 rounded-xl hover:bg-red-400/20 transition-colors">
-                          <Ban size={16} /> Revoke Access
-                        </button>
-                      </div>
+                      <button onClick={() => downloadFile(f.id, f.file_name)} className="flex items-center gap-2 px-4 py-2 font-semibold text-[12px] text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all btn-lift shrink-0">
+                        <Download size={14} /> Download
+                      </button>
                     </div>
                   )) : (
-                    <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-12 text-center">
-                      <Send className="mx-auto h-12 w-12 text-gray-600 mb-4" />
-                      <h3 className="text-lg font-bold text-gray-300">No sent files found</h3>
-                      <p className="text-gray-500 mt-2">You haven't shared anything matching this criteria yet.</p>
+                    <div className="bg-[#18181B] border border-[#27272A] rounded-xl p-12 text-center">
+                      <Send className="mx-auto h-8 w-8 text-[#3F3F46] mb-3" />
+                      <h3 className="text-[15px] font-semibold text-[#71717A]">No sent files</h3>
+                      <p className="text-[#52525B] text-[13px] mt-1">Start encoding and sharing files to see them here.</p>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Received Files View */}
+            {/* ═══ Received Files View ═══ */}
             {activeTab === "received" && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Received Files</h1>
-                  <p className="text-gray-400">Secure files shared with you by trusted peers.</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Received Files</h1>
+                  <p className="text-[#71717A] text-[14px]">Secure files shared with you by trusted peers.</p>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {filteredReceived.length > 0 ? filteredReceived.map(f => (
-                    <div key={f.id} className="bg-[#111827] border border-[#1F2937] hover:border-gray-600 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#0B0F14] rounded-xl text-blue-400 shrink-0 border border-[#1F2937]">
-                          <FileBadge size={24} />
+                    <div key={f.id} className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-[#27272A] rounded-lg border border-[#3F3F46] group-hover:bg-white group-hover:border-white transition-all shrink-0">
+                          <FileBadge size={18} className="text-white group-hover:text-[#09090B] transition-colors" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-gray-100">{f.file_name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs font-semibold px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md">Received</span>
-                            <span className="text-sm text-gray-500">from <span className="text-gray-300">{f.sender}</span></span>
-                            <span className="text-gray-700 text-xs">•</span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock size={12} /> {new Date(f.shared_at).toLocaleString()}
+                          <h3 className="font-semibold text-[15px] text-white">{f.file_name}</h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[11px] font-semibold px-2 py-0.5 bg-white/10 text-white rounded-full">Received</span>
+                            <span className="text-[12px] text-[#71717A]">from</span>
+                            <span className="text-[12px] font-medium text-[#A1A1AA]">{f.sender}</span>
+                            <span className="text-[#3F3F46] text-[10px]">•</span>
+                            <span className="text-[11px] text-[#52525B] flex items-center gap-1">
+                              <Clock size={10} /> {new Date(f.shared_at).toLocaleString()}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 ml-auto md:ml-0">
-                        <button onClick={() => downloadFile(f.id, f.file_name)} className="flex items-center gap-2 px-4 py-2 font-semibold text-sm text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors shadow-lg shadow-blue-600/20">
-                          <Download size={16} /> Download
-                        </button>
-                      </div>
+                      <button onClick={() => downloadFile(f.id, f.file_name)} className="flex items-center gap-2 px-4 py-2 font-semibold text-[12px] text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all btn-lift shrink-0">
+                        <Download size={14} /> Download
+                      </button>
                     </div>
                   )) : (
-                    <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-12 text-center">
-                      <Inbox className="mx-auto h-12 w-12 text-gray-600 mb-4" />
-                      <h3 className="text-lg font-bold text-gray-300">No received files found</h3>
-                      <p className="text-gray-500 mt-2">Your inbox looks empty right now.</p>
+                    <div className="bg-[#18181B] border border-[#27272A] rounded-xl p-12 text-center">
+                      <Inbox className="mx-auto h-8 w-8 text-[#3F3F46] mb-3" />
+                      <h3 className="text-[15px] font-semibold text-[#71717A]">No received files</h3>
+                      <p className="text-[#52525B] text-[13px] mt-1">Files shared by others will appear here.</p>
                     </div>
                   )}
                 </div>
