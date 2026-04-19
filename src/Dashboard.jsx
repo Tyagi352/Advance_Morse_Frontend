@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { strictEncodeToMorse } from "./utils/morse";
 
-const API_BASE = "http://localhost:5000" | "https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app";
+const API_BASE =  "https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app";
 
 export default function Dashboard({ token, setToken }) {
   const navigate = useNavigate();
