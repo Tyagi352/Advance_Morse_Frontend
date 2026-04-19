@@ -15,7 +15,7 @@ export default function Navbar({ setToken }) {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/users/me", {
+      const res = await fetch("https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app/api/users/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setCurrentUser(await res.json());

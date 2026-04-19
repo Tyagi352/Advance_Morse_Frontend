@@ -8,8 +8,8 @@ import ChatSidebar from "./components/ChatSidebar";
 import ChatWindow from "./components/ChatWindow";
 import { decodeFromMorse } from "./utils/morse";
 
-const API_BASE   = "http://localhost:5000";
-const SOCKET_URL = "http://localhost:5000";
+const API_BASE   = "https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app";
+const SOCKET_URL = "https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app";
 
 export default function ChatPage({ token }) {
   const navigate = useNavigate();

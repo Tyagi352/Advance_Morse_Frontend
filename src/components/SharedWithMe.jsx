@@ -6,7 +6,7 @@ export default function SharedWithMe({ token }) {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/shared/received', {
+      const res = await fetch('https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app/api/shared/received', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -30,7 +30,7 @@ export default function SharedWithMe({ token }) {
 
   const handleDecode = async (file) => {
     try {
-        const res = await fetch('http://localhost:5000/api/decode-shared', {
+        const res = await fetch('https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app/api/decode-shared', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
