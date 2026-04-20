@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Loader } from 'lucide-react';
 
-const API_BASE = "https://advance-morse-backend-4hjq.vercel.app";
+import { API_BASE } from '../config';
 
 export default function ShareModal({ file, token, users, onClose }) {
   const [recipientId, setRecipientId] = useState('');

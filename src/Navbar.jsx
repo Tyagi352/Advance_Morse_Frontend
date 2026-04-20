@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Shield, LogOut } from "lucide-react";
 
+import { API_BASE } from "./config";
+
 export default function Navbar({ setToken }) {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -15,7 +17,7 @@ export default function Navbar({ setToken }) {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch("https://advance-morse-backend-4hjq.vercel.app/api/users/me", {
+      const res = await fetch(`${API_BASE}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setCurrentUser(await res.json());

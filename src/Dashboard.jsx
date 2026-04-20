@@ -24,12 +24,11 @@ import {
   StopCircle,
   Radio,
   ArrowUpRight,
-  Activit,
+  Activity,
   Shield
 } from "lucide-react";
 import { strictEncodeToMorse } from "./utils/morse";
-
-const API_BASE =  "https://advance-morse-backend-4hjq.vercel.app";
+import { API_BASE } from "./config";
 
 export default function Dashboard({ token, setToken }) {
   const navigate = useNavigate();

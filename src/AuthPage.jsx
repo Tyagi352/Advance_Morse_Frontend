@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, Mail, User, ShieldAlert, ArrowRight, Shield } from "lucide-react";
 
-const API_BASE = "https://advance-morse-backend-4hjq.vercel.app";
+import { API_BASE } from "./config";
 
 export default function AuthPage({ setToken }) {
   const [username, setUsername] = useState("");
