@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { encodeToMorse } from "../utils/morse";
+import { encodeToMorse, strictEncodeToMorse } from "../utils/morse";
 
-export default function ChatInputBar({ selectedUser, onSend }) {
+export default function ChatInputBar({ selectedUser, onSend, languages }) {
   const [text,    setText]    = useState("");
   const [preview, setPreview] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState("english");
   
   const ref = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -13,8 +14,12 @@ export default function ChatInputBar({ selectedUser, onSend }) {
   const recognitionRef = useRef(null);
 
   useEffect(() => {
-    setPreview(text.trim() ? encodeToMorse(text) : "");
-  }, [text]);
+    try {
+      setPreview(text.trim() ? strictEncodeToMorse(text, language) : "");
+    } catch (err) {
+      setPreview("Error: " + err.message);
+    }
+  }, [text, language]);
 
   // Reset when conversation switches
   useEffect(() => {
@@ -27,10 +32,15 @@ export default function ChatInputBar({ selectedUser, onSend }) {
     const trimmed = text.trim();
     if (!trimmed && !audioBlob) return;
     
-    // onSend signature: (decoded, recipientId, morse, audio)
-    // Note: ChatPage provides onSend as (decoded, morse) or similar? 
-    // Let's check how onSend is passed in ChatWindow and ChatPage.
-    onSend(trimmed, encodeToMorse(trimmed), audioBlob);
+    let morse = "";
+    try {
+      morse = trimmed ? strictEncodeToMorse(trimmed, language) : "";
+    } catch (err) {
+      alert(err.message);
+      return;
+    }
+
+    onSend(trimmed, morse, audioBlob, language);
     
     setText("");
     setPreview("");
@@ -42,7 +52,6 @@ export default function ChatInputBar({ selectedUser, onSend }) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
       
-      // Try audio/mp4 if possible, fallback to standard
       const options = { mimeType: "audio/webm" };
       if (MediaRecorder.isTypeSupported("audio/mp4")) {
         options.mimeType = "audio/mp4";
@@ -68,7 +77,10 @@ export default function ChatInputBar({ selectedUser, onSend }) {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = "en-US";
+        
+        // Find speech code from centralized languages list
+        const selectedLangObj = languages.find(l => l.id === language);
+        recognition.lang = selectedLangObj ? selectedLangObj.speechCode : "en-US";
 
         recognition.onresult = (event) => {
           const current = event.resultIndex;
@@ -108,9 +120,26 @@ export default function ChatInputBar({ selectedUser, onSend }) {
 
   return (
     <div className="chat-input-area">
+      {/* Language Selection Pills */}
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto hide-scrollbar pb-1">
+        {languages.map(lang => (
+          <button
+            key={lang.id}
+            onClick={() => setLanguage(lang.id)}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+              language === lang.id
+                ? "bg-white text-[#09090B] border-white shadow-[0_0_10px_rgba(255,255,255,0.1)]"
+                : "bg-transparent text-[#71717A] border-[#27272A] hover:border-[#3F3F46] hover:text-[#A1A1AA]"
+            }`}
+          >
+            {lang.label}
+          </button>
+        ))}
+      </div>
+
       {preview && (
         <div className="chat-morse-preview">
-          <span className="chat-morse-label">MORSE</span>
+          <span className="chat-morse-label">MORSE ({language})</span>
           <span className="chat-morse-code">{preview}</span>
         </div>
       )}

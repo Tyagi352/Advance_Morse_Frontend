@@ -58,13 +58,9 @@ export default function EncodeFile({ token, API_BASE, setMessage, openShareModal
     handleEncode(await fileToEncode.text(), andShare);
   };
 
-  const getLanguageTag = (lang) => {
-    switch (lang) {
-      case "french": return "fr-FR";
-      case "hindi": return "hi-IN";
-      case "marathi": return "mr-IN";
-      default: return "en-US";
-    }
+  const getLanguageTag = (langId) => {
+    const langObj = languages.find(l => l.id === langId);
+    return langObj ? langObj.speechCode : "en-US";
   };
 
   const toggleRecording = () => {
@@ -144,15 +140,15 @@ export default function EncodeFile({ token, API_BASE, setMessage, openShareModal
       <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
         {languages.map(lang => (
           <button
-            key={lang}
-            onClick={() => setLanguage(lang)}
+            key={lang.id}
+            onClick={() => setLanguage(lang.id)}
             className={`px-4 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-all whitespace-nowrap ${
-              language === lang
+              language === lang.id
                 ? "bg-white text-[#09090B]"
                 : "bg-[#18181B] text-[#71717A] border border-[#27272A] hover:border-[#3F3F46] hover:text-white"
             }`}
           >
-            {lang}
+            {lang.label}
           </button>
         ))}
       </div>

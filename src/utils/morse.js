@@ -48,10 +48,11 @@ export function encodeToMorse(text) {
     .join(' ');
 }
 
-export function decodeFromMorse(morse) {
+export function decodeFromMorse(morse, language = "english") {
   if (!morse) return '';
+  const langMap = MORSE_CODES[language] || MORSE_CODES.english;
   const REVERSE_MAP = Object.fromEntries(
-    Object.entries(MORSE_CODES.english).map(([k, v]) => [v, k])
+    Object.entries(langMap).map(([k, v]) => [v, k])
   );
   return morse.split(' ')
     .map(code => REVERSE_MAP[code] ?? (code === '' ? '' : '?'))

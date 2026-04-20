@@ -27,7 +27,7 @@ import {
   Activity,
   Shield
 } from "lucide-react";
-import { API_BASE } from "./config";
+import { API_BASE, LANGUAGES } from "./config";
 import EncodeFile from "./components/EncodeFile";
 import DecodeFile from "./components/DecodeFile";
 
@@ -46,7 +46,7 @@ export default function Dashboard({ token, setToken }) {
   const [receivedFiles, setReceivedFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const languages = ["english", "hindi", "marathi", "french"];
+  const languages = LANGUAGES.map(l => l.id);
 
   useEffect(() => {
     if (token) {

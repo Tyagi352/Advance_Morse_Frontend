@@ -51,7 +51,7 @@ function LoadingDots() {
   );
 }
 
-export default function ChatWindow({ selectedUser, messages, onlineUsers, onSend, onBackClick, loading, API_BASE }) {
+export default function ChatWindow({ selectedUser, messages, onlineUsers, onSend, onBackClick, loading, API_BASE, languages }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function ChatWindow({ selectedUser, messages, onlineUsers, onSend
       </div>
 
       {/* Input */}
-      <ChatInputBar selectedUser={selectedUser} onSend={onSend} />
+      <ChatInputBar selectedUser={selectedUser} onSend={onSend} languages={languages} />
     </div>
   );
 }

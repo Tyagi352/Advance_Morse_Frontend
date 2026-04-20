@@ -13,3 +13,10 @@ export const API_BASE = isLocalhost
 export const SOCKET_URL = isLocalhost
   ? "http://localhost:5000"
   : "https://advance-morse-backend-4hjq.vercel.app";
+
+export const LANGUAGES = [
+  { id: "english", label: "English", speechCode: "en-US" },
+  { id: "hindi", label: "Hindi", speechCode: "hi-IN" },
+  { id: "marathi", label: "Marathi", speechCode: "mr-IN" },
+  { id: "french", label: "French", speechCode: "fr-FR" },
+];

@@ -8,7 +8,7 @@ import ChatSidebar from "./components/ChatSidebar";
 import ChatWindow from "./components/ChatWindow";
 import { decodeFromMorse } from "./utils/morse";
 
-import { API_BASE, SOCKET_URL } from "./config";
+import { API_BASE, SOCKET_URL, LANGUAGES } from "./config";
 
 export default function ChatPage({ token }) {
   const navigate = useNavigate();
@@ -33,12 +33,12 @@ export default function ChatPage({ token }) {
     sock.on("connect", () => console.log("Socket connected"));
     sock.on("online_users", (ids) => setOnlineUsers(ids));
     sock.on("private_message", (msg) => {
-      const decoded = msg.decoded || decodeFromMorse(msg.morse);
+      const decoded = msg.decoded || decodeFromMorse(msg.morse, msg.language);
       setAllMessages(prev => ({
         ...prev,
         [msg.from]: [
           ...(prev[msg.from] ?? []),
-          { id: `recv_${msg.timestamp}`, type: "received", ...msg, decoded },
+          { id: `recv_${msg.timestamp}`, type: "received", ...msg, decoded, language: msg.language || "english" },
         ],
       }));
     });
@@ -93,15 +93,15 @@ export default function ChatPage({ token }) {
   }, [loadChatHistory]);
 
   // ── Send a message (also send decoded text to backend for DB) ──
-  const sendMessage = (decoded, recipientId, morse, audio = null) => {
+  const sendMessage = (decoded, recipientId, morse, audio = null, language = "english") => {
     if (!socketRef.current) return;
     const ts = Date.now();
-    socketRef.current.emit("private_message", { to: recipientId, morse, decoded, timestamp: ts, audio });
+    socketRef.current.emit("private_message", { to: recipientId, morse, decoded, timestamp: ts, audio, language });
     setAllMessages(prev => ({
       ...prev,
       [recipientId]: [
         ...(prev[recipientId] ?? []),
-        { id: `sent_${ts}`, type: "sent", from: null, fromUsername: "You", decoded, morse, timestamp: ts },
+        { id: `sent_${ts}`, type: "sent", from: null, fromUsername: "You", decoded, morse, timestamp: ts, language },
       ],
     }));
   };
@@ -122,12 +122,13 @@ export default function ChatPage({ token }) {
         selectedUser={selectedUser}
         messages={msgs}
         onlineUsers={onlineUsers}
-        onSend={(decoded, morse, audio) =>
-          selectedUser && sendMessage(decoded, selectedUser.id, morse, audio)
+        onSend={(decoded, morse, audio, language) =>
+          selectedUser && sendMessage(decoded, selectedUser.id, morse, audio, language)
         }
         onBackClick={() => setSelectedUser(null)}
         loading={loadingChat}
         API_BASE={API_BASE}
+        languages={LANGUAGES}
       />
     </div>
   );
