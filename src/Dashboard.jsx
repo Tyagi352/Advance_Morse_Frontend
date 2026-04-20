@@ -27,8 +27,9 @@ import {
   Activity,
   Shield
 } from "lucide-react";
-import { strictEncodeToMorse } from "./utils/morse";
 import { API_BASE } from "./config";
+import EncodeFile from "./components/EncodeFile";
+import DecodeFile from "./components/DecodeFile";
 
 export default function Dashboard({ token, setToken }) {
   const navigate = useNavigate();
@@ -36,25 +37,14 @@ export default function Dashboard({ token, setToken }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [text, setText] = useState("");
-  const [file, setFile] = useState(null);
-  const [decoded, setDecoded] = useState("");
   const [message, setMessage] = useState("");
-  const [language, setLanguage] = useState("english");
-  const [fileToEncode, setFileToEncode] = useState(null);
-
-  const [isShareModalOpen, setShareModalOpen] = useState(false);
   const [fileToShare, setFileToShare] = useState(null);
+  const [isShareModalOpen, setShareModalOpen] = useState(false);
 
   const [users, setUsers] = useState([]);
   const [sentFiles, setSentFiles] = useState([]);
   const [receivedFiles, setReceivedFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [recognizedText, setRecognizedText] = useState("");
-  const [speechMorse, setSpeechMorse] = useState("");
-  const recognitionRef = useRef(null);
 
   const languages = ["english", "hindi", "marathi", "french"];
 
@@ -103,65 +93,6 @@ export default function Dashboard({ token, setToken }) {
     } catch (err) { console.error("Failed to fetch received files", err); }
   };
 
-  const handleEncode = async (content, andShare = false) => {
-    if (!token) { setMessage("Please login"); return; }
-    if (!content) { setMessage("Please enter text or select a file"); return; }
-
-    try {
-      const res = await fetch(`${API_BASE}/encode`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ text: content, language }),
-      });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        if (andShare) {
-          const f = new File([blob], "morse.enc", { type: "application/octet-stream" });
-          openShareModal(f);
-        } else {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url; a.download = "morse.enc"; a.click();
-          window.URL.revokeObjectURL(url);
-          setMessage("Text encoded & downloaded!");
-        }
-      } else {
-        const data = await res.json();
-        setMessage(data.error || "Encoding failed");
-      }
-    } catch { setMessage("Server error"); }
-  };
-
-  const encodeText = (andShare = false) => handleEncode(text, andShare);
-  const encodeTextFile = async (andShare = false) => {
-    if (!fileToEncode) return;
-    handleEncode(await fileToEncode.text(), andShare);
-  };
-
-  const decodeFile = async () => {
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("language", language);
-
-    try {
-      const res = await fetch(`${API_BASE}/decode`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setDecoded(data.decoded_text);
-        setMessage("File decoded successfully!");
-      } else {
-        setDecoded("");
-        setMessage(data.error || "Decoding failed");
-      }
-    } catch { setMessage("Server error"); }
-  };
-
   const downloadFile = async (fileId, fileName) => {
     try {
       const res = await fetch(`${API_BASE}/api/files/download/${fileId}`, {
@@ -183,90 +114,10 @@ export default function Dashboard({ token, setToken }) {
 
   const openShareModal = (f) => { setFileToShare(f); setShareModalOpen(true); };
 
-  const shareDecodedText = () => {
-    const blob = new Blob([decoded], { type: "text/plain" });
-    openShareModal(new File([blob], "decoded.txt", { type: "text/plain" }));
-  };
-
   const handleLogout = () => {
     setToken("");
     localStorage.removeItem("token");
     navigate("/auth");
-  };
-
-  const getLanguageTag = (lang) => {
-    switch (lang) {
-      case "french": return "fr-FR";
-      case "hindi": return "hi-IN";
-      case "marathi": return "mr-IN";
-      default: return "en-US";
-    }
-  };
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsRecording(false);
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setMessage("Speech API not supported in this browser. Please use Chrome/Edge.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = getLanguageTag(language);
-    recognition.interimResults = true;
-    recognition.continuous = true;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-      setMessage("");
-    };
-
-    recognition.onresult = (event) => {
-      let currentTranscript = "";
-      for (let i = 0; i < event.results.length; ++i) {
-        currentTranscript += event.results[i][0].transcript;
-      }
-      setRecognizedText(currentTranscript);
-
-      try {
-        const morse = strictEncodeToMorse(currentTranscript, language);
-        setSpeechMorse(morse);
-      } catch (err) {
-        setSpeechMorse("");
-        setMessage(err.message || "Unsupported character detected");
-        recognition.stop();
-        setIsRecording(false);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
-      setMessage("Microphone error or permission denied.");
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (e) {
-      console.error(e);
-      setMessage("Failed to start recording.");
-    }
-  };
-
-  const encodeVoiceText = (andShare = false) => {
-    handleEncode(recognizedText, andShare);
   };
 
   const filteredSent = sentFiles.filter(f => 
@@ -548,215 +399,24 @@ export default function Dashboard({ token, setToken }) {
 
             {/* ═══ Encode View ═══ */}
             {activeTab === "encode" && (
-              <div className="space-y-6 animate-fade-in-up">
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Encode & Encrypt</h1>
-                  <p className="text-[#71717A] text-[14px]">Convert text or files into layered secure Morse Code format.</p>
-                </div>
-                
-                {/* Language Selector */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                  {languages.map(lang => (
-                    <button
-                      key={lang}
-                      onClick={() => setLanguage(lang)}
-                      className={`px-4 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-all whitespace-nowrap ${
-                        language === lang
-                          ? "bg-white text-[#09090B]"
-                          : "bg-[#18181B] text-[#71717A] border border-[#27272A] hover:border-[#3F3F46] hover:text-white"
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Text Encoding */}
-                  <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group">
-                    <h2 className="text-[15px] font-semibold mb-4 flex items-center gap-2.5">
-                      <div className="p-1.5 bg-[#27272A] rounded-md group-hover:bg-white group-hover:text-[#09090B] transition-all">
-                        <FileText className="text-white group-hover:text-[#09090B]" size={16} />
-                      </div>
-                      Text Encoding
-                    </h2>
-                    <textarea
-                      placeholder="Type your sensitive message here..."
-                      value={text}
-                      onChange={e => setText(e.target.value)}
-                      className="w-full p-3.5 rounded-lg bg-[#09090B] text-[#E4E4E7] border border-[#27272A] focus:outline-none focus:ring-1 focus:ring-[#3F3F46] focus:border-[#3F3F46] h-36 resize-none transition-all placeholder-[#52525B] text-[14px] mb-4"
-                    />
-                    <div className="flex gap-3">
-                      <button onClick={() => encodeText(false)} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] btn-lift">
-                        <Download size={14} /> Encode & Download
-                      </button>
-                      <button onClick={() => encodeText(true)} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] btn-lift">
-                        <Send size={14} /> Encode & Share
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* File Encoding */}
-                  <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group flex flex-col justify-between">
-                    <div>
-                      <h2 className="text-[15px] font-semibold mb-4 flex items-center gap-2.5">
-                        <div className="p-1.5 bg-[#27272A] rounded-md group-hover:bg-white group-hover:text-[#09090B] transition-all">
-                          <Lock className="text-white group-hover:text-[#09090B]" size={16} />
-                        </div>
-                        File Encoding
-                      </h2>
-                      <div className="border border-dashed border-[#27272A] group-hover:border-[#3F3F46] rounded-xl p-6 mb-4 text-center hover:bg-white/[0.02] transition-all relative cursor-pointer bg-[#09090B]">
-                        <input
-                          type="file"
-                          accept=".txt"
-                          onChange={e => setFileToEncode(e.target.files[0])}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <UploadCloud className="mx-auto h-8 w-8 text-[#52525B] group-hover:text-white transition-colors mb-2" />
-                        <p className="text-[13px] text-[#71717A]">
-                          {fileToEncode ? (
-                            <span className="text-white font-medium">{fileToEncode.name}</span>
-                          ) : (
-                            <>Drop or <span className="text-white font-medium">browse</span> .txt file</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={() => encodeTextFile(false)} disabled={!fileToEncode} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
-                        <Download size={14} /> Download
-                      </button>
-                      <button onClick={() => encodeTextFile(true)} disabled={!fileToEncode} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
-                        <Send size={14} /> Share
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Voice Encoding */}
-                <div className="bg-[#18181B] border border-[#27272A] p-6 rounded-xl">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-[15px] font-semibold flex items-center gap-2 text-white">
-                      <Mic className="text-[#71717A]" size={16} /> Voice Encoding
-                    </h2>
-                    <div className="flex items-center gap-3">
-                      {isRecording && (
-                        <div className="flex items-center gap-1">
-                          <span className="w-1 h-3 bg-white rounded-full animate-[pulse_1s_ease-in-out_infinite]"></span>
-                          <span className="w-1 h-5 bg-white rounded-full animate-[pulse_1.2s_ease-in-out_infinite_0.2s]"></span>
-                          <span className="w-1 h-3 bg-white rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></span>
-                          <span className="text-white text-[11px] font-semibold ml-1.5 animate-pulse">Recording</span>
-                        </div>
-                      )}
-                      <button
-                        onClick={toggleRecording}
-                        className={`flex items-center gap-2 px-3 py-1.5 font-semibold rounded-lg transition-all text-[12px] ${
-                          isRecording
-                            ? "bg-white/10 text-white border border-white/30 hover:bg-white/20"
-                            : "bg-[#27272A] text-[#A1A1AA] border border-[#3F3F46] hover:bg-[#3F3F46] hover:text-white"
-                        }`}
-                      >
-                        {isRecording ? <StopCircle size={14} /> : <Radio size={14} />}
-                        {isRecording ? "Stop" : "Record"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#52525B] mb-1.5 uppercase tracking-wider">Recognized Text</label>
-                      <textarea
-                        readOnly
-                        value={recognizedText}
-                        placeholder="Speak into your microphone..."
-                        className="w-full p-3 rounded-lg bg-[#09090B] text-[#E4E4E7] border border-[#27272A] focus:outline-none h-28 resize-none placeholder-[#52525B] text-[13px]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#52525B] mb-1.5 uppercase tracking-wider">Morse Output</label>
-                      <textarea
-                        readOnly
-                        value={speechMorse}
-                        placeholder="Live Morse code output..."
-                        className="w-full p-3 rounded-lg bg-[#09090B] text-[#A1A1AA] font-mono border border-[#27272A] focus:outline-none h-28 resize-none placeholder-[#52525B] text-[12px]"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <button onClick={() => encodeVoiceText(true)} disabled={!recognizedText || !speechMorse} className="w-full flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
-                      <Send size={14} /> Encode & Share Voice
-                    </button>
-                  </div>
-                </div>
-
-              </div>
+              <EncodeFile
+                token={token}
+                API_BASE={API_BASE}
+                setMessage={setMessage}
+                openShareModal={openShareModal}
+                languages={languages}
+              />
             )}
 
             {/* ═══ Decode View ═══ */}
             {activeTab === "decode" && (
-              <div className="space-y-6 animate-fade-in-up">
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Decode & Decrypt</h1>
-                  <p className="text-[#71717A] text-[14px]">Restore your encrypted .enc files back to readable text.</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group flex flex-col justify-between">
-                    <div>
-                      <h2 className="text-[15px] font-semibold mb-4 flex items-center gap-2.5">
-                        <div className="p-1.5 bg-[#27272A] rounded-md group-hover:bg-white transition-all">
-                          <Unlock className="text-white group-hover:text-[#09090B]" size={16} />
-                        </div>
-                        File Decoding
-                      </h2>
-                      <div className="border border-dashed border-[#27272A] group-hover:border-[#3F3F46] rounded-xl p-6 mb-4 text-center hover:bg-white/[0.02] transition-all relative cursor-pointer bg-[#09090B]">
-                        <input
-                          type="file"
-                          accept=".enc"
-                          onChange={e => setFile(e.target.files[0])}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <FileBadge className="mx-auto h-8 w-8 text-[#52525B] group-hover:text-white transition-colors mb-2" />
-                        <p className="text-[13px] text-[#71717A]">
-                          {file ? (
-                            <span className="text-white font-medium">{file.name}</span>
-                          ) : (
-                            <>Drop or <span className="text-white font-medium">browse</span> .enc file</>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <button onClick={decodeFile} disabled={!file} className="w-full flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
-                      <Unlock size={14} /> Decode File
-                    </button>
-                  </div>
-
-                  {decoded && (
-                    <div className="bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] p-6 rounded-xl transition-all group">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-[15px] font-semibold text-white flex items-center gap-2.5">
-                          <div className="p-1.5 bg-white rounded-md">
-                            <CheckCircle className="text-[#09090B]" size={16} />
-                          </div>
-                          Decoded Output
-                        </h2>
-                        <button
-                          onClick={shareDecodedText}
-                          className="px-4 py-1.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] text-[12px] transition-all btn-lift"
-                        >
-                          Share
-                        </button>
-                      </div>
-                      <textarea
-                        readOnly
-                        value={decoded}
-                        className="w-full p-3 rounded-lg bg-[#09090B] text-[#A1A1AA] font-mono border border-[#27272A] h-36 resize-none text-[13px]"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <DecodeFile
+                token={token}
+                API_BASE={API_BASE}
+                setMessage={setMessage}
+                openShareModal={openShareModal}
+                languages={languages}
+              />
             )}
 
             {/* ═══ Sent Files View ═══ */}

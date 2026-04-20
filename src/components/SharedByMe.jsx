@@ -7,7 +7,7 @@ export default function SharedByMe({ token }) {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const res = await fetch('https://advance-morse-backend-4hjq.vercel.app/api/shared/sent', {
+        const res = await fetch( `${API_BASE}/api/shared/sent`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
