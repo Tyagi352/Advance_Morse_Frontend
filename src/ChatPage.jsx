@@ -21,7 +21,7 @@ export default function ChatPage({ token }) {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const socketRef = useRef(null);
 
-  // ── Connect Socket.IO ──────────────────────────────────────
+  // ── Connect Socket.IO ─────────────────────────────────────
   useEffect(() => {
     if (!token) return;
 
@@ -93,10 +93,10 @@ export default function ChatPage({ token }) {
   }, [loadChatHistory]);
 
   // ── Send a message (also send decoded text to backend for DB) ──
-  const sendMessage = (decoded, recipientId, morse) => {
+  const sendMessage = (decoded, recipientId, morse, audio = null) => {
     if (!socketRef.current) return;
     const ts = Date.now();
-    socketRef.current.emit("private_message", { to: recipientId, morse, decoded, timestamp: ts });
+    socketRef.current.emit("private_message", { to: recipientId, morse, decoded, timestamp: ts, audio });
     setAllMessages(prev => ({
       ...prev,
       [recipientId]: [
@@ -122,11 +122,12 @@ export default function ChatPage({ token }) {
         selectedUser={selectedUser}
         messages={msgs}
         onlineUsers={onlineUsers}
-        onSend={(decoded, morse) =>
-          selectedUser && sendMessage(decoded, selectedUser.id, morse)
+        onSend={(decoded, morse, audio) =>
+          selectedUser && sendMessage(decoded, selectedUser.id, morse, audio)
         }
         onBackClick={() => setSelectedUser(null)}
         loading={loadingChat}
+        API_BASE={API_BASE}
       />
     </div>
   );

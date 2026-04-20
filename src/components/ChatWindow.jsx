@@ -5,13 +5,26 @@ function fmt(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, API_BASE }) {
   const isSent = msg.type === "sent";
+  const audioUrl = msg.file_path ? `${API_BASE}${msg.file_path}` : null;
+
   return (
     <div className={`cmsg-wrapper ${isSent ? "sent" : "received"}`}>
       <div className="cmsg-bubble">
         {!isSent && <div className="cmsg-sender">{msg.fromUsername}</div>}
-        <div className="cmsg-text">{msg.decoded}</div>
+        
+        {audioUrl && (
+          <div className="chat-audio-container">
+            <audio controls preload="metadata">
+              <source src={audioUrl} type="audio/mp4" />
+              <source src={audioUrl} type="audio/webm" />
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+        )}
+
+        <div className="cmsg-text">{msg.decoded || (audioUrl ? "[Voice Message]" : "")}</div>
         <div className="cmsg-morse">
           <span className="cmsg-morse-label">MORSE</span>
           {msg.morse}
@@ -38,7 +51,7 @@ function LoadingDots() {
   );
 }
 
-export default function ChatWindow({ selectedUser, messages, onlineUsers, onSend, onBackClick, loading }) {
+export default function ChatWindow({ selectedUser, messages, onlineUsers, onSend, onBackClick, loading, API_BASE }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -102,7 +115,7 @@ export default function ChatWindow({ selectedUser, messages, onlineUsers, onSend
             </p>
           </div>
         ) : (
-          messages.map(m => <MessageBubble key={m.id} msg={m} />)
+          messages.map(m => <MessageBubble key={m.id} msg={m} API_BASE={API_BASE} />)
         )}
         <div ref={bottomRef} />
       </div>
