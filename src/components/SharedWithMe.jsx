@@ -6,7 +6,7 @@ export default function SharedWithMe({ token }) {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch('https://advance-morse-backend-4hjq-a5c1cayoh-tyagi352s-projects.vercel.app/api/shared/received', {
+      const res = await fetch(' https://advance-morse-backend-4hjq.vercel.app/api/shared/received', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
