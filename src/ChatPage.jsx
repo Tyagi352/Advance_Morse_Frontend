@@ -8,8 +8,7 @@ import ChatSidebar from "./components/ChatSidebar";
 import ChatWindow from "./components/ChatWindow";
 import { decodeFromMorse } from "./utils/morse";
 
-const API_BASE   = "http://localhost:5000";
-const SOCKET_URL = "http://localhost:5000";
+import { API_BASE, SOCKET_URL } from "./constants";
 
 export default function ChatPage({ token }) {
   const navigate = useNavigate();

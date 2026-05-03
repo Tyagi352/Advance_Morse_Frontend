@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Loader } from 'lucide-react';
 
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from '../constants';
 
 export default function ShareModal({ file, token, users, onClose }) {
   const [recipientId, setRecipientId] = useState('');

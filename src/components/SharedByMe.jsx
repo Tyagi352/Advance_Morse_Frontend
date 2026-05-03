@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../constants';
 
 export default function SharedByMe({ token }) {
   const [files, setFiles] = useState([]);
@@ -7,7 +8,7 @@ export default function SharedByMe({ token }) {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/shared/sent', {
+        const res = await fetch(`${API_BASE}/api/shared/sent`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

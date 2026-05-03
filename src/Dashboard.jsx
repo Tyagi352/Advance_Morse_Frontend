@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { encodeWithLanguage } from "./utils/morse";
 
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "./constants";
 
 export default function Dashboard({ token, setToken }) {
   const navigate = useNavigate();

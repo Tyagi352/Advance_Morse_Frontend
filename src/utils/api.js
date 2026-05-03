@@ -2,7 +2,7 @@
  * API Utility Functions for Morse Code Backend
  */
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../constants';
 
 /**
  * Get all supported languages from backend
