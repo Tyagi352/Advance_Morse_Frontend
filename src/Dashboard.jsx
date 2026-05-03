@@ -27,7 +27,7 @@ import {
   Activity,
   Shield
 } from "lucide-react";
-import { strictEncodeToMorse } from "./utils/morse";
+import { encodeWithLanguage } from "./utils/morse";
 
 const API_BASE = "http://localhost:5000";
 
@@ -235,16 +235,8 @@ export default function Dashboard({ token, setToken }) {
         currentTranscript += event.results[i][0].transcript;
       }
       setRecognizedText(currentTranscript);
-
-      try {
-        const morse = strictEncodeToMorse(currentTranscript, language);
-        setSpeechMorse(morse);
-      } catch (err) {
-        setSpeechMorse("");
-        setMessage(err.message || "Unsupported character detected");
-        recognition.stop();
-        setIsRecording(false);
-      }
+      const morse = encodeWithLanguage(currentTranscript, language);
+      setSpeechMorse(morse);
     };
 
     recognition.onerror = (event) => {
@@ -684,9 +676,12 @@ export default function Dashboard({ token, setToken }) {
                     </div>
                   </div>
                   
-                  <div className="mt-4">
-                    <button onClick={() => encodeVoiceText(true)} disabled={!recognizedText || !speechMorse} className="w-full flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
-                      <Send size={14} /> Encode & Share Voice
+                  <div className="mt-4 flex gap-3">
+                    <button onClick={() => encodeVoiceText(false)} disabled={!recognizedText || !speechMorse} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-[#27272A] border border-[#3F3F46] rounded-lg hover:bg-[#3F3F46] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
+                      <Download size={14} /> Encode & Download
+                    </button>
+                    <button onClick={() => encodeVoiceText(true)} disabled={!recognizedText || !speechMorse} className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-[#09090B] bg-white rounded-lg hover:bg-[#E4E4E7] transition-all text-[13px] disabled:opacity-30 disabled:cursor-not-allowed btn-lift">
+                      <Send size={14} /> Encode & Share
                     </button>
                   </div>
                 </div>
